@@ -1,36 +1,67 @@
+require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const { AccessToken, RoomServiceClient } = require('livekit-server-sdk');
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
-// Initialize LiveKit client
+// Configuração do LiveKit
+const LIVEKIT_URL = process.env.LIVEKIT_URL || 'ws://localhost:7880';
+const API_KEY = process.env.LIVEKIT_API_KEY;
+const API_SECRET = process.env.LIVEKIT_API_SECRET;
+
+if (!API_KEY || !API_SECRET) {
+  console.error('Erro: LIVEKIT_API_KEY e LIVEKIT_API_SECRET são obrigatórios');
+  process.exit(1);
+}
+
+// Inicializa o cliente do LiveKit
 const livekit = new RoomServiceClient(
-  'wss://your-vps-ip:7880',
-  'API_KEY',
-  'API_SECRET'
+  LIVEKIT_URL,
+  API_KEY,
+  API_SECRET
 );
 
-// Generate token for a participant
-app.post('/token', (req, res) => {
+// Middleware para verificar chave de API
+const apiKeyAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || authHeader !== `Bearer ${process.env.API_AUTH_TOKEN}`) {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+  next();
+};
+
+// Rota de status do servidor
+app.get('/status', (req, res) => {
+  res.json({ status: 'online', service: 'LiveKit API' });
+});
+
+// Gerar token para participante
+app.post('/token', apiKeyAuth, (req, res) => {
   const { room, identity, name } = req.body;
   
-  // Validate input
+  // Validação de entrada
   if (!room || !identity) {
-    return res.status(400).json({ error: 'Missing required fields' });
+    return res.status(400).json({ error: 'Campos obrigatórios ausentes: room e identity' });
   }
 
   try {
-    const token = new AccessToken('API_KEY', 'API_SECRET', {
+    const token = new AccessToken(API_KEY, API_SECRET, {
       identity: identity,
       name: name || identity,
     });
 
+    // Permissões do token
     token.addGrant({
       roomJoin: true,
       room: room,
       canPublish: true,
       canSubscribe: true,
+      canPublishData: true,
+      canUpdateOwnMetadata: true,
+      canPublishSources: ['microphone', 'camera', 'screen_share'],
     });
 
     const tokenString = token.toJwt();

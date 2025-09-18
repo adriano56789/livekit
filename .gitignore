@@ -9,8 +9,9 @@ secrets.*
 
 # Docker
 .dockerignore
-Dockerfile*
 docker-compose.override.yml
+# Permitir Dockerfile específicos
+!Dockerfile.api
 
 # Binários
 *.exe

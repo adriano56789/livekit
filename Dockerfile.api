@@ -1,0 +1,16 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copiar apenas os arquivos necessários
+COPY package*.json ./
+COPY api.js .
+
+# Instalar dependências
+RUN npm install express cors dotenv livekit-server-sdk
+
+# Expor a porta da API
+EXPOSE 3001
+
+# Comando para iniciar a aplicação
+CMD ["node", "api.js"]

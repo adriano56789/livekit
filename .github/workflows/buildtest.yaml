@@ -1,77 +1,60 @@
-# Copyright 2023 LiveKit, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Workflow de teste simplificado para LiveKit
 
-name: Test
+name: Teste de Build
 
 on:
   workflow_dispatch:
   push:
-    branches: [master]
+    branches: [main, master]
   pull_request:
-    branches: [master]
+    branches: [main, master]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: shogo82148/actions-setup-redis@v1
-        with:
-          redis-version: "6.x"
-          auto-start: true
-      - run: redis-cli ping
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '^1.24'
-
-      - name: Set up gotestfmt
-        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@v2.4.1
-
-      - name: Replace mutexes
+      - name: Checkout do código
+        uses: actions/checkout@v4
+      
+      - name: Configurar Docker
         run: |
-          go get github.com/sasha-s/go-deadlock
-          grep -rl sync.Mutex ./pkg | xargs sed -i 's/sync\.Mutex/deadlock\.Mutex/g'
-          grep -rl sync.RWMutex ./pkg | xargs sed -i 's/sync\.RWMutex/deadlock\.RWMutex/g'
-          go install golang.org/x/tools/cmd/goimports@latest
-          grep -rl deadlock.Mutex ./pkg | xargs goimports -w
-          grep -rl deadlock.RWMutex ./pkg | xargs goimports -w
-          go mod tidy
-
-      - name: Mage Build
-        uses: magefile/mage-action@v3
+          # Configurar Docker para usar buildx
+          docker buildx create --use
+          
+      - name: Iniciar Redis
+        uses: supercharge/redis-github-action@1.7.0
         with:
-          version: latest
-          args: build
-
-      - name: Static Check
-        uses: amarpal/staticcheck-action@master
-        with:
-          checks: '["all", "-ST1000", "-ST1003", "-ST1020", "-ST1021", "-ST1022", "-SA1019"]'
-          install-go: false
-
-      - name: Test
+          redis-version: 6
+          
+      - name: Verificar Redis
+        run: redis-cli ping
+        
+      - name: Iniciar serviços com Docker Compose
         run: |
-          set -euo pipefail
-          MallocNanoZone=0 go test -race -json -v ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
-
-      # Upload the original go test log as an artifact for later review.
-      - name: Upload test log
-        uses: actions/upload-artifact@v4
+          # Construir e iniciar os containers
+          docker-compose up -d --build
+          # Listar containers em execução
+          docker ps
+          # Esperar o serviço iniciar
+          sleep 10
+          
+      - name: Verificar se a API está respondendo
+        run: |
+          # Verificar se o endpoint da API está acessível
+          curl -sSf --retry 5 --retry-delay 5 --retry-max-time 30 http://localhost:7880/rtc/ || (echo "Falha ao acessar a API" && exit 1)
+          
+      - name: Executar testes de conexão
+        run: |
+          # Instalar dependências Node.js para testes
+          npm ci
+          # Executar teste de conexão
+          node test-connection.js || (echo "Teste de conexão falhou" && exit 1)
+          
+      - name: Parar serviços
         if: always()
-        with:
-          name: test-log
-          path: /tmp/gotest.log
-          if-no-files-found: error
+        run: |
+          # Parar e remover containers
+          docker-compose down -v --remove-orphans
+          # Limpar recursos não utilizados
+          docker system prune -f
+          docker volume prune -f

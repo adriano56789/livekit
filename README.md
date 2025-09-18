@@ -1,82 +1,219 @@
-# LiveKit Docker Setup
+# 🚀 LiveKit Server - Configuração para VPS Própria
 
-Este repositório contém a configuração para executar o LiveKit em um ambiente Docker isolado, pronto para ser implantado em sua VPS.
+Este repositório contém uma configuração otimizada para executar o LiveKit em sua própria VPS, fornecendo controle total sobre a infraestrutura de streaming de vídeo e áudio em tempo real.
 
-## Visão Geral
+## 🎯 Visão Geral
 
 Este projeto configura o LiveKit com:
-- Servidor LiveKit em um container Docker
-- Redis para armazenamento em cache e estado distribuído
-- Configuração personalizável via arquivo `livekit.yaml`
-- Portas mapeadas para fácil integração
+- 🐳 Servidor LiveKit em containers Docker
+- 🧠 Redis para armazenamento em cache e estado distribuído
+- ⚙️ Configuração personalizável via arquivo `livekit.yaml`
+- 🔄 Balanceamento de carga e alta disponibilidade
+- 🔒 Segurança reforçada com autenticação por token
 
-## Pré-requisitos
+## 🛠️ Pré-requisitos
 
+- VPS com Ubuntu 20.04/22.04 (recomendado)
+- Mínimo 2 vCPUs, 4GB RAM (recomendado 4 vCPUs, 8GB RAM para produção)
 - Docker e Docker Compose instalados
-- Acesso root/sudo na VPS
-- Portas 7880, 7881 e 50000-60000/udp liberadas no firewall
+- Domínio configurado (recomendado para produção)
+- Portas abertas:
+  - 80/tcp (HTTP)
+  - 443/tcp (HTTPS)
+  - 7880/tcp (WebSocket)
+  - 7881/udp (RTP/RTCP)
+  - 50000-60000/udp (WebRTC)
+  - 3478/udp (STUN)
+  - 5349/tcp (TURN)
 
-## Configuração Rápida
+## 🚀 Instalação Rápida
 
-1. **Configure as credenciais**
-   - Edite o arquivo `docker-compose.yml` e substitua:
-     - `API_KEY:API_SECRET` por suas credenciais seguras
-     - `your_secure_redis_password` por uma senha forte para o Redis
-
-2. **Configure o domínio (opcional, mas recomendado)**
-   - Edite o arquivo `livekit.yaml` e substitua `seu.dominio.com` pelo seu domínio real
-   - Configure o DNS para apontar para o IP da sua VPS
-
-3. **Inicie os serviços**
+1. **Acesse sua VPS**
    ```bash
-   docker-compose up -d
+   ssh seu_usuario@seu_ip_da_vps
    ```
 
-4. **Verifique os logs**
+2. **Atualize o sistema**
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   ```
+
+3. **Instale dependências**
+   ```bash
+   sudo apt install -y git docker.io docker-compose
+   sudo systemctl enable --now docker
+   sudo usermod -aG docker $USER
+   newgrp docker
+   ```
+
+4. **Clone o repositório**
+   ```bash
+   git clone https://github.com/seu-usuario/livekit-docker.git
+   cd livekit-docker
+   ```
+
+5. **Configure as variáveis de ambiente**
+   ```bash
+   cp .env.example .env
+   nano .env  # Use o editor de sua preferência
+   ```
+
+6. **Configure o domínio (recomendado)**
+   - Aponte seu domínio para o IP da VPS
+   - Instale o certbot para SSL:
+   ```bash
+   sudo apt install -y certbot
+   sudo certbot certonly --standalone -d seu.dominio.com
+   ```
+   - Crie diretório para certificados:
+   ```bash
+   mkdir -p certs
+   sudo ln -s /etc/letsencrypt/live/seu.dominio.com/fullchain.pem certs/cert.pem
+   sudo ln -s /etc/letsencrypt/live/seu.dominio.com/privkey.pem certs/key.pem
+   ```
+
+7. **Inicie os contêineres**
+   ```bash
+   docker-compose up -d --build
+   ```
+
+8. **Verifique os logs**
    ```bash
    docker-compose logs -f
    ```
 
-## Configuração Avançada
+## 🔧 Configuração Avançada
 
-### Variáveis de Ambiente
+### Variáveis de Ambiente Importantes
 
-Você pode personalizar a configuração através de variáveis de ambiente no arquivo `docker-compose.yml`:
+Edite o arquivo `.env` para configurar:
 
-- `LIVEKIT_KEYS`: Chaves de API no formato `CHAVE:SECRET`
-- `LIVEKIT_CONFIG`: Caminho para o arquivo de configuração (padrão: /livekit.yaml)
+```env
+# Configuração Básica
+PUBLIC_IP=seu_ip_publico
+DOMAIN=seu.dominio.com
 
-### Portas
+# Segurança
+LIVEKIT_API_KEY=sua_chave_aqui
+LIVEKIT_API_SECRET=sua_senha_segura_aqui
+REDIS_PASSWORD=outra_senha_segura
+API_AUTH_TOKEN=token_para_acesso_a_api
 
-- `7880`: API e WebSocket
-- `7881`: RTP/RTCP (UDP)
-- `50000-60000`: WebRTC (UDP)
-
-### Volumes
-
-- `redis_data`: Dados persistentes do Redis
-
-## Segurança
-
-1. **NUNCA** faça commit de credenciais reais no repositório
-2. Use HTTPS com certificados válidos em produção
-3. Mantenha o Docker e as imagens atualizadas
-4. Configure um firewall adequado
-
-## Monitoramento
-
-O LiveKit expõe métricas do Prometheus na porta 7880 no endpoint `/metrics`. Você pode configurar um servidor Prometheus para coletar essas métricas.
-
-## Solução de Problemas
-
-### Verificar status dos containers
-```bash
-docker-compose ps
+# Configurações do LiveKit
+LIVEKIT_REGION=us-east-1
+LIVEKIT_TURNS_ENABLED=true
+LOG_LEVEL=info
 ```
 
-### Verificar logs
+### Portas Utilizadas
+
+| Porta   | Protocolo | Finalidade                     |
+|---------|-----------|--------------------------------|
+| 80      | TCP       | Redirecionamento HTTP → HTTPS  |
+| 443     | TCP       | HTTPS (WebRTC/TURN)            |
+| 7880    | TCP       | API e WebSocket LiveKit        |
+| 7881    | UDP       | RTP/RTCP                       |
+| 3478    | UDP       | STUN                           |
+| 5349    | TCP       | TURN sobre TLS                 |
+| 50000-60000 | UDP   | WebRTC (faixa dinâmica)        |
+
+## 🔒 Segurança
+
+1. **Firewall**
+   ```bash
+   sudo ufw default deny incoming
+   sudo ufw default allow outgoing
+   sudo ufw allow 22/tcp        # SSH
+   sudo ufw allow 80/tcp        # HTTP
+   sudo ufw allow 443/tcp       # HTTPS
+   sudo ufw allow 7880/tcp      # LiveKit WS
+   sudo ufw allow 7881/udp      # LiveKit RTP
+   sudo ufw allow 3478/udp      # STUN
+   sudo ufw allow 5349/tcp      # TURN over TLS
+   sudo ufw allow 50000:60000/udp  # WebRTC
+   sudo ufw enable
+   ```
+
+2. **Atualizações Automáticas**
+   ```bash
+   # Atualização de segurança automática
+   sudo apt install -y unattended-upgrades
+   sudo dpkg-reconfigure -plow unattended-upgrades
+   
+   # Atualização automática de certificados
+   (crontab -l 2>/dev/null; echo "0 3 * * * certbot renew --quiet --deploy-hook \"cd /caminho/para/livekit-docker && docker-compose restart livekit\"") | crontab -
+   ```
+
+## 📊 Monitoramento
+
+### Métricas do LiveKit
+O LiveKit expõe métricas no formato Prometheus em `http://localhost:7880/metrics`
+
+### Monitoramento com Netdata (Opcional)
 ```bash
-docker-compose logs livekit
+docker run -d --name=netdata \
+  --pid=host \
+  --network=host \
+  -v netdataconfig:/etc/netdata \
+  -v netdatalib:/var/lib/netdata \
+  -v netdatacache:/var/cache/netdata \
+  -v /etc/passwd:/host/etc/passwd:ro \
+  -v /etc/group:/host/etc/group:ro \
+  -v /proc:/host/proc:ro \
+  -v /sys:/host/sys:ro \n  --restart unless-stopped \
+  --cap-add SYS_PTRACE \
+  --security-opt apparmor=unconfined \
+  netdata/netdata
+```
+
+## 🔄 Manutenção
+
+### Atualização
+```bash
+cd /caminho/para/livekit-docker
+git pull
+docker-compose pull
+docker-compose up -d --build
+```
+
+### Backup
+```bash
+# Backup do Redis
+mkdir -p ~/backups
+sudo cp -r /var/lib/docker/volumes/livekit-docker_redis_data ~/backups/redis_$(date +%Y%m%d)
+```
+
+## 🛠️ Solução de Problemas
+
+### Verificar Status
+```bash
+docker-compose ps
+docker stats
+docker-compose logs -f
+```
+
+### Reiniciar Serviços
+```bash
+docker-compose restart
+# Ou para um serviço específico
+docker-compose restart livekit
+```
+
+### Limpar Recursos Não Utilizados
+```bash
+docker system prune -f
+docker volume prune -f
+```
+
+## 📚 Recursos Adicionais
+
+- [Documentação Oficial do LiveKit](https://docs.livekit.io/)
+- [Exemplos de Uso](https://github.com/livekit-examples)
+- [Fórum da Comunidade](https://github.com/livekit/livekit/discussions)
+
+## 📄 Licença
+
+Este projeto está licenciado sob a Licença Apache 2.0 - veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 docker-compose logs redis
 ```
 
