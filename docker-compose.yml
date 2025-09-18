@@ -1,0 +1,67 @@
+version: '3.8'
+
+# Variáveis de ambiente
+# Copie .env.example para .env e atualize com suas credenciais
+
+services:
+  # Servidor LiveKit
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: livekit
+    restart: unless-stopped
+    ports:
+      - "7880:7880"  # API e WebSocket
+      - "7881:7881/udp"  # RTP/RTCP (UDP)
+      - "50000-60000:50000-60000/udp"  # Faixa de portas para WebRTC
+    volumes:
+      - ./livekit.yaml:/livekit.yaml
+    environment:
+      - LIVEKIT_KEYS=${LIVEKIT_API_KEY}:${LIVEKIT_API_SECRET}
+      - LIVEKIT_DEVELOPMENT=false
+      - LIVEKIT_REDIS_ADDRESS=redis:6379
+      - LIVEKIT_REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      - redis
+    networks:
+      - livekit_network
+
+  # API Service (opcional, pode ser removido se não for usar)
+  api:
+    image: node:18-alpine
+    container_name: livekit_api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - LIVEKIT_URL=ws://livekit:7880
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+    volumes:
+      - ./api:/app
+    working_dir: /app
+    command: sh -c "npm install && npm start"
+    depends_on:
+      - livekit
+      - redis
+    networks:
+      - livekit_network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: livekit_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - livekit_network
+
+networks:
+  livekit_network:
+    driver: bridge
+
+volumes:
+  redis_data:

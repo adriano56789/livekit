@@ -1,23 +1,102 @@
-<!--BEGIN_BANNER_IMAGE-->
+# LiveKit Docker Setup
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="/.github/banner_dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="/.github/banner_light.png">
-  <img style="width:100%;" alt="The LiveKit icon, the name of the repository and some sample code in the background." src="https://raw.githubusercontent.com/livekit/livekit/main/.github/banner_light.png">
-</picture>
+Este repositório contém a configuração para executar o LiveKit em um ambiente Docker isolado, pronto para ser implantado em sua VPS.
 
-<!--END_BANNER_IMAGE-->
+## Visão Geral
 
-# LiveKit: Real-time video, audio and data for developers
+Este projeto configura o LiveKit com:
+- Servidor LiveKit em um container Docker
+- Redis para armazenamento em cache e estado distribuído
+- Configuração personalizável via arquivo `livekit.yaml`
+- Portas mapeadas para fácil integração
 
-[LiveKit](https://livekit.io) is an open source project that provides scalable, multi-user conferencing based on WebRTC.
-It's designed to provide everything you need to build real-time video audio data capabilities in your applications.
+## Pré-requisitos
 
-LiveKit's server is written in Go, using the awesome [Pion WebRTC](https://github.com/pion/webrtc) implementation.
+- Docker e Docker Compose instalados
+- Acesso root/sudo na VPS
+- Portas 7880, 7881 e 50000-60000/udp liberadas no firewall
 
-[![GitHub stars](https://img.shields.io/github/stars/livekit/livekit?style=social&label=Star&maxAge=2592000)](https://github.com/livekit/livekit/stargazers/)
-[![Slack community](https://img.shields.io/endpoint?url=https%3A%2F%2Flivekit.io%2Fbadges%2Fslack)](https://livekit.io/join-slack)
-[![Twitter Follow](https://img.shields.io/twitter/follow/livekit)](https://twitter.com/livekit)
+## Configuração Rápida
+
+1. **Configure as credenciais**
+   - Edite o arquivo `docker-compose.yml` e substitua:
+     - `API_KEY:API_SECRET` por suas credenciais seguras
+     - `your_secure_redis_password` por uma senha forte para o Redis
+
+2. **Configure o domínio (opcional, mas recomendado)**
+   - Edite o arquivo `livekit.yaml` e substitua `seu.dominio.com` pelo seu domínio real
+   - Configure o DNS para apontar para o IP da sua VPS
+
+3. **Inicie os serviços**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Verifique os logs**
+   ```bash
+   docker-compose logs -f
+   ```
+
+## Configuração Avançada
+
+### Variáveis de Ambiente
+
+Você pode personalizar a configuração através de variáveis de ambiente no arquivo `docker-compose.yml`:
+
+- `LIVEKIT_KEYS`: Chaves de API no formato `CHAVE:SECRET`
+- `LIVEKIT_CONFIG`: Caminho para o arquivo de configuração (padrão: /livekit.yaml)
+
+### Portas
+
+- `7880`: API e WebSocket
+- `7881`: RTP/RTCP (UDP)
+- `50000-60000`: WebRTC (UDP)
+
+### Volumes
+
+- `redis_data`: Dados persistentes do Redis
+
+## Segurança
+
+1. **NUNCA** faça commit de credenciais reais no repositório
+2. Use HTTPS com certificados válidos em produção
+3. Mantenha o Docker e as imagens atualizadas
+4. Configure um firewall adequado
+
+## Monitoramento
+
+O LiveKit expõe métricas do Prometheus na porta 7880 no endpoint `/metrics`. Você pode configurar um servidor Prometheus para coletar essas métricas.
+
+## Solução de Problemas
+
+### Verificar status dos containers
+```bash
+docker-compose ps
+```
+
+### Verificar logs
+```bash
+docker-compose logs livekit
+docker-compose logs redis
+```
+
+### Reiniciar serviços
+```bash
+docker-compose restart
+```
+
+## Atualização
+
+Para atualizar para a versão mais recente:
+
+```bash
+docker-compose pull
+docker-compose up -d
+```
+
+## Licença
+
+Este projeto está licenciado sob a [Licença Apache 2.0](LICENSE).
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/livekit/livekit)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/livekit/livekit)](https://github.com/livekit/livekit/releases/latest)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/livekit/livekit/buildtest.yaml?branch=master)](https://github.com/livekit/livekit/actions/workflows/buildtest.yaml)

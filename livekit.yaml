@@ -1,0 +1,55 @@
+# Configuração do LiveKit
+port: 7880
+
+# Configuração do Redis
+redis:
+  address: redis:6379
+  password: your_secure_redis_password  # Mesma senha definida no docker-compose.yml
+
+# Configuração RTC
+rtc:
+  port_range_start: 50000
+  port_range_end: 60000
+  tcp_port: 7881
+
+# Chaves de API (substitua por suas próprias chaves)
+keys:
+  API_KEY: API_SECRET  # Substitua por suas credenciais seguras
+
+# Configuração de log
+log_level: info
+
+# Configuração de vídeo
+video:
+  # Resolução máxima permitida para vídeos
+  max_sender_resolution: "hd"
+  # Taxa de quadros máxima
+  max_frame_rate: 30
+
+# Configuração de áudio
+audio:
+  # Usar opus DTX para economizar largura de banda quando não há áudio
+  dtx: true
+  # Nível de eco
+  aec_level: 1
+
+# Configuração de TURN/STUN (opcional, mas recomendado para melhor conectividade)
+turn:
+  enabled: true
+  domain: seu.dominio.com  # Substitua pelo seu domínio
+  tls_port: 5349
+  port: 3478
+  # Descomente e configure se quiser usar TURN com credenciais estáticas
+  # credentials:
+  #   - username: TURN_USERNAME
+  #     credential: TURN_CREDENTIAL
+  #     ttl: 86400
+
+# Configuração de registro de salas (opcional)
+room:
+  # Tempo de vida máximo de uma sala quando vazia (em segundos)
+  empty_timeout: 300
+  # Tempo máximo de vida de uma sala (em segundos)
+  max_participant_duration: 14400
+  # Número máximo de participantes por sala
+  max_participants: 50

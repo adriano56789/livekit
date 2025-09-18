@@ -1,29 +1,55 @@
-# Binaries for programs and plugins
+# Arquivos de configuração local
+livekit.local.yaml
+*.local.yaml
+
+# Credenciais e segredos
+*.env
+.env
+secrets.*
+
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose.override.yml
+
+# Binários
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Test binary, built with `go test -c`
 *.test
 
-# checksums of file tree
-.checksumgo
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
-livekit-server
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Dependências
+vendor/
+node_modules/
 bin/
 proto/
 
-# Mac
+# Logs
+logs/
+*.log
+
+# Arquivos do sistema
 .DS_Store
+Thumbs.db
 
-# IDE
+# IDEs e editores
 .idea/
+.vscode/
+*.swp
+*.swo
 
+# Build outputs
 dist/
+build/
+
+# Arquivos temporários
+*.tmp
+*.bak
+*.swp
+*~
+
+# Arquivos específicos do LiveKit
+.checksumgo
+livekit-server
