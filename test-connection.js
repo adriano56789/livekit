@@ -1,31 +1,60 @@
+require('dotenv').config();
 const { RoomServiceClient } = require('livekit-server-sdk');
 
-// Configure with your LiveKit server details
+// Configuração do LiveKit
+const LIVEKIT_URL = process.env.LIVEKIT_URL || 'ws://localhost:7880';
+const API_KEY = process.env.LIVEKIT_API_KEY;
+const API_SECRET = process.env.LIVEKIT_API_SECRET;
+
+if (!API_KEY || !API_SECRET) {
+  console.error('Erro: LIVEKIT_API_KEY e LIVEKIT_API_SECRET são obrigatórios no .env');
+  process.exit(1);
+}
+
+// Configura o cliente do LiveKit
 const livekit = new RoomServiceClient(
-  'wss://your-vps-ip:7880',
-  'API_KEY',
-  'API_SECRET',
+  LIVEKIT_URL.replace('ws', 'http'), // O RoomServiceClient usa HTTP, não WebSocket
+  API_KEY,
+  API_SECRET,
   { retries: 3 }
 );
 
 async function testConnection() {
   try {
-    // List rooms to test connection
-    const rooms = await livekit.listRooms();
-    console.log('Successfully connected to LiveKit server!');
-    console.log('Active rooms:', rooms);
+    console.log('Conectando ao servidor LiveKit em:', LIVEKIT_URL);
     
-    // Create a test room
+    // Lista as salas para testar a conexão
+    const rooms = await livekit.listRooms();
+    console.log('✅ Conexão com o LiveKit estabelecida com sucesso!');
+    console.log(`📊 Salas ativas: ${rooms.length}`);
+    
+    // Cria uma sala de teste
     const roomName = `test-room-${Date.now()}`;
+    // Cria uma sala de teste
+    console.log(`\n🔄 Criando sala de teste: ${roomName}`);
     await livekit.createRoom({
       name: roomName,
-      emptyTimeout: 10 * 60, // 10 minutes
+      emptyTimeout: 10 * 60, // 10 minutos
       maxParticipants: 20,
     });
-    console.log(`Created test room: ${roomName}`);
+    console.log(`✅ Sala de teste criada com sucesso: ${roomName}`);
+    
+    // Lista as salas novamente para confirmar
+    const updatedRooms = await livekit.listRooms();
+    console.log(`\n📋 Total de salas após criação: ${updatedRooms.length}`);
     
     return true;
   } catch (error) {
+    console.error('\n❌ Erro ao conectar ao LiveKit:');
+    console.error(error.message);
+    
+    if (error.response) {
+      console.error('Detalhes da resposta:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data
+      });
+    }
     console.error('Failed to connect to LiveKit server:', error);
     return false;
   }
